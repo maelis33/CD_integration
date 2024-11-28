@@ -1,0 +1,59 @@
+name: Dev Branch CI Workflow
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build-and-test:
+    
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27018:27017
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+
+    - name: Run frontend unit tests
+      run: |
+        cd frontend
+        npm test
+
+    - name: Run backend unit tests
+      run: |
+        cd backend
+        npm test
+
+    - name: Merge dev to main
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.repos.merge({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            base: 'main',
+            head: 'dev'
+          })
